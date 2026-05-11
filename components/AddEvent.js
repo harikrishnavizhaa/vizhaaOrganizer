@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TextInput, 
-  TouchableOpacity,
-  Dimensions
+import {
+  View, Text, StyleSheet, ScrollView, TextInput,
+  TouchableOpacity, Modal, Dimensions, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,485 +10,495 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 const { width } = Dimensions.get('window');
 
 const EVENT_TYPES = [
-  { id: 'wedding', label: 'Wedding', icon: 'ring' },
+  { id: 'wedding',   label: 'Wedding',   icon: 'ring' },
   { id: 'corporate', label: 'Corporate', icon: 'briefcase' },
-  { id: 'birthday', label: 'Birthday', icon: 'birthday-cake' },
-  { id: 'other', label: 'Other', icon: 'ellipsis-h' },
+  { id: 'birthday',  label: 'Birthday',  icon: 'birthday-cake' },
+  { id: 'other',     label: 'Other',     icon: 'ellipsis-h' },
 ];
 
 const DRESS_CODES = [
-  { id: 'white_shirt', label: 'White Shirt', icon: 'tshirt' },
-  { id: 'black_shirt', label: 'Black Shirt', icon: 'tshirt' },
-  { id: 'white_tshirt', label: 'White T-Shirt', icon: 'tshirt' },
-  { id: 'black_tshirt', label: 'Black T-Shirt', icon: 'tshirt' },
+  { id: 'white_shirt',  label: 'White Shirt',  icon: 'tshirt', color: '#FFFFFF' },
+  { id: 'black_shirt',  label: 'Black Shirt',  icon: 'tshirt', color: '#222222' },
+  { id: 'white_tshirt', label: 'White T-Shirt', icon: 'tshirt', color: '#FFFDE7' },
+  { id: 'black_tshirt', label: 'Black T-Shirt', icon: 'tshirt', color: '#424242' },
+  { id: 'other',        label: 'Other',         icon: 'ellipsis-h', color: '#9E9E9E' },
 ];
 
 const SERVICES = [
   { id: 'breakfast', label: 'Breakfast', icon: 'coffee' },
-  { id: 'lunch', label: 'Lunch', icon: 'utensils' },
-  { id: 'dinner', label: 'Dinner', icon: 'moon' },
-  { id: 'snacks', label: 'Snacks', icon: 'cookie' },
+  { id: 'lunch',     label: 'Lunch',     icon: 'utensils' },
+  { id: 'dinner',    label: 'Dinner',    icon: 'moon' },
+  { id: 'snacks',    label: 'Snacks',    icon: 'cookie' },
 ];
 
-const AddEvent = ({ onBack, onProceed }) => {
-  const [eventName, setEventName] = useState('');
-  const [location, setLocation] = useState('');
-  const [date, setDate] = useState('');
-  const [inTime, setInTime] = useState('');
-  const [outTime, setOutTime] = useState('');
-  const [suppliers, setSuppliers] = useState('1');
-  const [eventType, setEventType] = useState('wedding');
-  const [dressCode, setDressCode] = useState('white_shirt');
-  const [selectedServices, setSelectedServices] = useState(['breakfast', 'lunch']);
+const HOURS   = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+const MINUTES = ['00', '15', '30', '45'];
+const PERIODS = ['AM', 'PM'];
 
-  const toggleService = (id) => {
-    setSelectedServices(prev => 
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
-  };
+// ─── Custom Calendar ──────────────────────────────────────────────────────────
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+const DAY_NAMES   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function CalendarPicker({ visible, onClose, onSelect }) {
+  const today = new Date();
+  const [year,  setYear]  = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = Array.from({ length: firstDay + daysInMonth }, (_, i) =>
+    i < firstDay ? null : i - firstDay + 1
+  );
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 11) { setMonth(0);  setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header Banner */}
-      <View style={styles.bannerContainer}>
-        <LinearGradient
-          colors={['#1A1A1A', '#333']}
-          style={styles.banner}
-        >
-          <MaterialCommunityIcons name="party-popper" size={40} color="#FFD700" style={styles.bannerIconLeft} />
-          <Text style={styles.bannerTitle}>EVENT DETAILS</Text>
-          <MaterialCommunityIcons name="star-face" size={40} color="#FFD700" style={styles.bannerIconRight} />
-        </LinearGradient>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Ionicons name="chevron-back" size={24} color="#FFF" />
+    <Modal transparent visible={visible} animationType="fade">
+      <TouchableOpacity style={cal.overlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={cal.box}>
+          <View style={cal.header}>
+            <TouchableOpacity onPress={prevMonth} style={cal.navBtn}>
+              <Ionicons name="chevron-back" size={20} color="#2C1206" />
+            </TouchableOpacity>
+            <Text style={cal.monthText}>{MONTH_NAMES[month]} {year}</Text>
+            <TouchableOpacity onPress={nextMonth} style={cal.navBtn}>
+              <Ionicons name="chevron-forward" size={20} color="#2C1206" />
+            </TouchableOpacity>
+          </View>
+          <View style={cal.dayRow}>
+            {DAY_NAMES.map(d => <Text key={d} style={cal.dayName}>{d}</Text>)}
+          </View>
+          <View style={cal.grid}>
+            {cells.map((day, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[cal.cell, day ? cal.activeCell : cal.emptyCell]}
+                onPress={() => day && onSelect(
+                  `${String(day).padStart(2,'0')}/${String(month+1).padStart(2,'0')}/${year}`
+                )}
+                disabled={!day}
+              >
+                {day ? <Text style={cal.cellText}>{day}</Text> : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity style={cal.closeBtn} onPress={onClose}>
+            <Text style={cal.closeBtnText}>Cancel</Text>
+          </TouchableOpacity>
         </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+const cal = StyleSheet.create({
+  overlay:   { flex:1, backgroundColor:'rgba(0,0,0,0.45)', justifyContent:'center', alignItems:'center' },
+  box:       { backgroundColor:'#FFF', borderRadius:20, padding:20, width: width - 50, shadowColor:'#000', shadowOpacity:0.2, shadowRadius:15, elevation:10 },
+  header:    { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:14 },
+  navBtn:    { padding:6, backgroundColor:'#F5F5F5', borderRadius:8 },
+  monthText: { fontSize:16, fontFamily:'Outfit_700Bold', color:'#2C1206' },
+  dayRow:    { flexDirection:'row', marginBottom:6 },
+  dayName:   { flex:1, textAlign:'center', fontSize:12, fontFamily:'Outfit_600SemiBold', color:'#999' },
+  grid:      { flexDirection:'row', flexWrap:'wrap' },
+  cell:      { width:'14.28%', aspectRatio:1, justifyContent:'center', alignItems:'center', marginVertical:2 },
+  activeCell:{ },
+  emptyCell: { },
+  cellText:  { fontSize:13, fontFamily:'Outfit_400Regular', color:'#2C1206' },
+  closeBtn:  { marginTop:14, alignItems:'center', paddingVertical:10, backgroundColor:'#F5F5F5', borderRadius:10 },
+  closeBtnText: { fontSize:14, fontFamily:'Outfit_700Bold', color:'#7B3F00' },
+});
+
+// ─── Time Picker ──────────────────────────────────────────────────────────────
+function TimePicker({ visible, onClose, onSelect }) {
+  const [hh, setHh] = useState('10');
+  const [mm, setMm] = useState('00');
+  const [pp, setPp] = useState('AM');
+
+  const Col = ({ data, selected, onPick }) => (
+    <FlatList
+      data={data}
+      keyExtractor={i => i}
+      showsVerticalScrollIndicator={false}
+      style={{ maxHeight: 160 }}
+      renderItem={({ item }) => (
+        <TouchableOpacity onPress={() => onPick(item)}
+          style={[tp.colItem, item === selected && tp.colItemActive]}>
+          <Text style={[tp.colText, item === selected && tp.colTextActive]}>{item}</Text>
+        </TouchableOpacity>
+      )}
+    />
+  );
+
+  return (
+    <Modal transparent visible={visible} animationType="fade">
+      <TouchableOpacity style={cal.overlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={[cal.box, { paddingBottom: 10 }]}>
+          <Text style={[cal.monthText, { textAlign:'center', marginBottom:16 }]}>Select Time</Text>
+          <View style={tp.row}>
+            <View style={tp.colWrap}><Text style={tp.colLabel}>Hour</Text><Col data={HOURS}   selected={hh} onPick={setHh}/></View>
+            <Text style={tp.sep}>:</Text>
+            <View style={tp.colWrap}><Text style={tp.colLabel}>Min</Text><Col data={MINUTES} selected={mm} onPick={setMm}/></View>
+            <View style={tp.colWrap}><Text style={tp.colLabel}>  </Text><Col data={PERIODS} selected={pp} onPick={setPp}/></View>
+          </View>
+          <TouchableOpacity style={[cal.closeBtn, { backgroundColor:'#7B3F00', marginTop:16 }]}
+            onPress={() => { onSelect(`${hh}:${mm} ${pp}`); onClose(); }}>
+            <Text style={[cal.closeBtnText, { color:'#FFF' }]}>Confirm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[cal.closeBtn, { marginTop:6 }]} onPress={onClose}>
+            <Text style={cal.closeBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+const tp = StyleSheet.create({
+  row:          { flexDirection:'row', alignItems:'center', justifyContent:'center' },
+  colWrap:      { alignItems:'center', marginHorizontal:8 },
+  colLabel:     { fontSize:12, fontFamily:'Outfit_600SemiBold', color:'#999', marginBottom:4 },
+  colItem:      { paddingVertical:8, paddingHorizontal:14, borderRadius:8, marginVertical:2 },
+  colItemActive:{ backgroundColor:'#2C1206' },
+  colText:      { fontSize:15, fontFamily:'Outfit_400Regular', color:'#2C1206' },
+  colTextActive:{ color:'#FFD700', fontFamily:'Outfit_700Bold' },
+  sep:          { fontSize:22, fontFamily:'Outfit_700Bold', color:'#2C1206', marginBottom:4, alignSelf:'center' },
+});
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+const AddEvent = ({ onBack, onProceed }) => {
+  const [eventName,      setEventName]      = useState('');
+  const [location,       setLocation]       = useState('');
+  const [date,           setDate]           = useState('');
+  const [inTime,         setInTime]         = useState('');
+  const [outTime,        setOutTime]        = useState('');
+  const [suppliers,      setSuppliers]      = useState('1');
+  const [eventType,      setEventType]      = useState('wedding');
+  const [otherEventType, setOtherEventType] = useState('');
+  const [dressCode,      setDressCode]      = useState('white_shirt');
+  const [otherDress,     setOtherDress]     = useState('');
+  const [selectedSvcs,   setSelectedSvcs]   = useState([]);
+  const [costPerHead,    setCostPerHead]    = useState('');
+
+  const [showCal,     setShowCal]     = useState(false);
+  const [showInTime,  setShowInTime]  = useState(false);
+  const [showOutTime, setShowOutTime] = useState(false);
+
+  const toggleSvc = (id) =>
+    setSelectedSvcs(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id]);
+
+  const totalCost = (parseFloat(costPerHead) || 0) * (parseInt(suppliers) || 0);
+
+  return (
+    <SafeAreaView style={s.container}>
+      {/* ── Header ── */}
+      <View style={s.headerRow}>
+        <TouchableOpacity style={s.backBtn} onPress={onBack}>
+          <Ionicons name="chevron-back" size={22} color="#2C1206" />
+        </TouchableOpacity>
+        <View style={s.headerCenter}>
+          <MaterialCommunityIcons name="party-popper" size={22} color="#FFD700" />
+          <Text style={s.headerTitle}>EVENT DETAILS</Text>
+          <MaterialCommunityIcons name="star-face" size={22} color="#FFD700" />
+        </View>
+        <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.formCard}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+        <View style={s.form}>
+
           {/* Event Name */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Event Name</Text>
-            <TextInput 
-              style={styles.input}
-              placeholder="e.g. Vijay's Wedding Event"
-              placeholderTextColor="#BBB"
-              value={eventName}
-              onChangeText={setEventName}
-            />
-          </View>
+          <Field label="Event Name">
+            <TextInput style={s.input} placeholder="e.g. Vijay's Wedding Event"
+              placeholderTextColor="#BBB" value={eventName} onChangeText={setEventName} />
+          </Field>
 
           {/* Event Type */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Event Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {EVENT_TYPES.map(type => (
-                <TouchableOpacity 
-                  key={type.id} 
-                  style={[styles.typeCard, eventType === type.id && styles.activeCard]}
-                  onPress={() => setEventType(type.id)}
-                >
-                  <View style={[styles.typeIconContainer, eventType === type.id && styles.activeIconContainer]}>
-                    <FontAwesome5 name={type.icon} size={24} color={eventType === type.id ? '#FFD700' : '#666'} />
+          <Field label="Event Type">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {EVENT_TYPES.map(t => (
+                <TouchableOpacity key={t.id}
+                  style={[s.typeCard, eventType === t.id && s.activeCard]}
+                  onPress={() => setEventType(t.id)}>
+                  <View style={[s.iconBox, eventType === t.id && s.iconBoxActive]}>
+                    <FontAwesome5 name={t.icon} size={22} color={eventType === t.id ? '#FFD700' : '#888'} />
                   </View>
-                  <Text style={styles.typeLabel}>{type.label}</Text>
+                  <Text style={s.typeLabel}>{t.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+            {eventType === 'other' && (
+              <TextInput style={[s.input, { marginTop: 10 }]}
+                placeholder="Describe your event type…"
+                placeholderTextColor="#BBB"
+                value={otherEventType}
+                onChangeText={setOtherEventType} />
+            )}
+          </Field>
 
           {/* Location */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Location</Text>
-            <TextInput 
-              style={styles.input}
-              placeholder="e.g. Event Venue Address"
-              placeholderTextColor="#BBB"
-              value={location}
-              onChangeText={setLocation}
-            />
-          </View>
+          <Field label="Location">
+            <View style={s.inputIcon}>
+              <Ionicons name="location-outline" size={18} color="#B08040" style={s.inputIconImg} />
+              <TextInput style={[s.input, s.inputWithIcon]}
+                placeholder="e.g. Event Venue Address"
+                placeholderTextColor="#BBB" value={location} onChangeText={setLocation} />
+            </View>
+          </Field>
 
           {/* Date */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date</Text>
-            <TextInput 
-              style={styles.input}
-              placeholder="DD/MM/YYYY"
-              placeholderTextColor="#BBB"
-              value={date}
-              onChangeText={setDate}
-            />
-          </View>
+          <Field label="Date">
+            <TouchableOpacity style={s.pickerBtn} onPress={() => setShowCal(true)}>
+              <Ionicons name="calendar-outline" size={18} color="#B08040" />
+              <Text style={[s.pickerText, !date && s.placeholder]}>
+                {date || 'DD / MM / YYYY'}
+              </Text>
+            </TouchableOpacity>
+          </Field>
 
           {/* Times */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>In Time</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="HH:MM AM/PM"
-                placeholderTextColor="#BBB"
-                value={inTime}
-                onChangeText={setInTime}
-              />
+          <View style={s.row}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Field label="In Time">
+                <TouchableOpacity style={s.pickerBtn} onPress={() => setShowInTime(true)}>
+                  <Ionicons name="time-outline" size={18} color="#B08040" />
+                  <Text style={[s.pickerText, !inTime && s.placeholder]}>
+                    {inTime || 'HH:MM AM/PM'}
+                  </Text>
+                </TouchableOpacity>
+              </Field>
             </View>
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-              <Text style={styles.label}>Out Time</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="HH:MM AM/PM"
-                placeholderTextColor="#BBB"
-                value={outTime}
-                onChangeText={setOutTime}
-              />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Field label="Out Time">
+                <TouchableOpacity style={s.pickerBtn} onPress={() => setShowOutTime(true)}>
+                  <Ionicons name="time-outline" size={18} color="#B08040" />
+                  <Text style={[s.pickerText, !outTime && s.placeholder]}>
+                    {outTime || 'HH:MM AM/PM'}
+                  </Text>
+                </TouchableOpacity>
+              </Field>
             </View>
           </View>
 
           {/* Suppliers */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Number of Suppliers</Text>
-            <TextInput 
-              style={styles.input}
-              placeholder="1"
-              keyboardType="numeric"
-              placeholderTextColor="#BBB"
-              value={suppliers}
-              onChangeText={setSuppliers}
-            />
-          </View>
+          <Field label="Number of Suppliers">
+            <TextInput style={s.input} placeholder="e.g. 50" keyboardType="numeric"
+              placeholderTextColor="#BBB" value={suppliers} onChangeText={setSuppliers} />
+          </Field>
 
           {/* Dress Code */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Dress Code</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {DRESS_CODES.map(code => (
-                <TouchableOpacity 
-                  key={code.id} 
-                  style={[styles.typeCard, dressCode === code.id && styles.activeCard]}
-                  onPress={() => setDressCode(code.id)}
-                >
-                  <View style={[styles.typeIconContainer, dressCode === code.id && styles.activeIconContainer]}>
-                    <FontAwesome5 name={code.icon} size={24} color={dressCode === code.id ? '#FFD700' : '#666'} />
+          <Field label="Dress Code">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {DRESS_CODES.map(dc => (
+                <TouchableOpacity key={dc.id}
+                  style={[s.typeCard, dressCode === dc.id && s.activeCard]}
+                  onPress={() => setDressCode(dc.id)}>
+                  <View style={[s.iconBox, dressCode === dc.id && s.iconBoxActive]}>
+                    <FontAwesome5 name={dc.icon} size={22} color={dressCode === dc.id ? '#FFD700' : '#888'} />
                   </View>
-                  <Text style={styles.typeLabel}>{code.label}</Text>
+                  <Text style={s.typeLabel}>{dc.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+            {dressCode === 'other' && (
+              <TextInput style={[s.input, { marginTop: 10 }]}
+                placeholder="Describe your dress code…"
+                placeholderTextColor="#BBB"
+                value={otherDress}
+                onChangeText={setOtherDress} />
+            )}
+          </Field>
 
           {/* Services */}
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Select Services</Text>
-              <View style={styles.priceTag}>
-                <Text style={styles.priceTagText}>₹500 each</Text>
-              </View>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {SERVICES.map(service => (
-                <TouchableOpacity 
-                  key={service.id} 
-                  style={[styles.typeCard, selectedServices.includes(service.id) && styles.activeCard]}
-                  onPress={() => toggleService(service.id)}
-                >
-                  <View style={[styles.typeIconContainer, selectedServices.includes(service.id) && styles.activeIconContainer]}>
-                    <FontAwesome5 name={service.icon} size={24} color={selectedServices.includes(service.id) ? '#FFD700' : '#666'} />
+          <Field label="Select Services">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {SERVICES.map(sv => (
+                <TouchableOpacity key={sv.id}
+                  style={[s.typeCard, selectedSvcs.includes(sv.id) && s.activeCard]}
+                  onPress={() => toggleSvc(sv.id)}>
+                  <View style={[s.iconBox, selectedSvcs.includes(sv.id) && s.iconBoxActive]}>
+                    <FontAwesome5 name={sv.icon} size={22}
+                      color={selectedSvcs.includes(sv.id) ? '#FFD700' : '#888'} />
                   </View>
-                  <Text style={styles.typeLabel}>{service.label}</Text>
+                  <Text style={s.typeLabel}>{sv.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+          </Field>
 
-          {/* Cost Estimation Card */}
-          <View style={styles.costCard}>
-            <Text style={styles.costTitle}>Estimated Cost</Text>
-            <Text style={styles.costDetail}>Services : {selectedServices.length} x ₹500</Text>
-            <Text style={styles.costDetail}>Suppliers : 1</Text>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.costRow}>
-              <Text style={styles.totalLabel}>Total :</Text>
-              <Text style={styles.totalValue}>₹{selectedServices.length * 500}</Text>
-            </View>
-
-            <View style={styles.advanceBar}>
-              <Text style={styles.advanceLabel}>Advance to Pay(25%) :</Text>
-              <Text style={styles.advanceValue}>₹{(selectedServices.length * 500) * 0.25}</Text>
-            </View>
-            <Text style={styles.balanceText}>Balance after event : ₹{(selectedServices.length * 500) * 0.75}</Text>
-
-            <View style={styles.couponGroup}>
-              <Text style={styles.couponLabel}>Coupon code</Text>
-              <TextInput 
-                style={styles.couponInput}
-                placeholder="Enter your Vizhaa's voucher"
+          {/* Cost per head */}
+          <Field label="Estimated Cost per Head (₹)">
+            <View style={s.inputIcon}>
+              <Text style={[s.inputIconImg, { fontSize: 16, color: '#B08040', fontFamily:'Outfit_700Bold' }]}>₹</Text>
+              <TextInput style={[s.input, s.inputWithIcon]}
+                placeholder="Amount per supplier"
                 placeholderTextColor="#BBB"
-              />
+                keyboardType="numeric"
+                value={costPerHead}
+                onChangeText={setCostPerHead} />
             </View>
+          </Field>
 
-            <TouchableOpacity 
-              style={styles.payBtn} 
-              onPress={() => onProceed({
-                eventName,
-                location,
-                date,
-                inTime,
-                outTime,
-                suppliers,
-                eventType,
-                dressCode,
-                selectedServices
-              })}
-            >
-              <Text style={styles.payBtnText}>Proceed to Payment</Text>
-            </TouchableOpacity>
+          {/* Cost Summary Card */}
+          <View style={s.costCard}>
+            <LinearGradient colors={['#2C1206', '#5C2A0E']} style={s.costHeader}>
+              <Text style={s.costHeaderText}>Cost Summary</Text>
+            </LinearGradient>
+            <View style={s.costBody}>
+              <CostRow label="Services selected"  value={`${selectedSvcs.length}`} unit="" />
+              <CostRow label="Suppliers"           value={suppliers || '0'} unit="" />
+              <CostRow label="Cost per head"       value={costPerHead ? `₹${costPerHead}` : '—'} unit="" />
+              <View style={s.divider} />
+              <CostRow label="Total Estimate"      value={totalCost > 0 ? `₹${totalCost.toLocaleString()}` : '—'} bold />
+              {totalCost > 0 && (
+                <>
+                  <View style={s.advanceBar}>
+                    <Text style={s.advLbl}>Advance (25%)</Text>
+                    <Text style={s.advVal}>₹{(totalCost * 0.25).toLocaleString()}</Text>
+                  </View>
+                  <Text style={s.balText}>Balance after event : ₹{(totalCost * 0.75).toLocaleString()}</Text>
+                </>
+              )}
+
+              <Field label="Coupon Code" noMargin>
+                <TextInput style={s.couponInput}
+                  placeholder="Enter Vizhaa voucher code"
+                  placeholderTextColor="#BBB" />
+              </Field>
+
+              <TouchableOpacity style={s.payBtn}
+                onPress={() => onProceed({ eventName, location, date, inTime, outTime,
+                  suppliers, eventType: eventType === 'other' ? otherEventType : eventType,
+                  dressCode: dressCode === 'other' ? otherDress : dressCode,
+                  selectedSvcs, costPerHead })}>
+                <Text style={s.payBtnText}>Proceed to Payment</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
+            </View>
           </View>
+
         </View>
       </ScrollView>
 
-      {/* Bottom Nav Placeholder (to match spacing) */}
-      <View style={{ height: 80 }} />
+      {/* Modals */}
+      <CalendarPicker visible={showCal} onClose={() => setShowCal(false)}
+        onSelect={d => { setDate(d); setShowCal(false); }} />
+      <TimePicker visible={showInTime}  onClose={() => setShowInTime(false)}
+        onSelect={t => setInTime(t)} />
+      <TimePicker visible={showOutTime} onClose={() => setShowOutTime(false)}
+        onSelect={t => setOutTime(t)} />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
+const Field = ({ label, children, noMargin }) => (
+  <View style={[s.inputGroup, noMargin && { marginBottom: 0 }]}>
+    {label ? <Text style={s.label}>{label}</Text> : null}
+    {children}
+  </View>
+);
+
+const CostRow = ({ label, value, unit, bold }) => (
+  <View style={s.costRow}>
+    <Text style={[s.costLbl, bold && { fontFamily:'Outfit_700Bold', fontSize: 15 }]}>{label}</Text>
+    <Text style={[s.costVal, bold && { fontFamily:'Outfit_700Bold', fontSize: 18, color:'#2C1206' }]}>
+      {value}{unit}
+    </Text>
+  </View>
+);
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F4F4F4' },
+
+  /* Header */
+  headerRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: '#FFF',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 6, elevation: 4,
   },
-  bannerContainer: {
-    height: 140,
-    margin: 15,
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  banner: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  bannerTitle: {
-    color: '#FFF',
-    fontSize: 22,
-    fontFamily: 'Outfit_700Bold',
-    marginHorizontal: 15,
-  },
-  bannerIconLeft: { opacity: 0.6 },
-  bannerIconRight: { opacity: 0.6 },
   backBtn: {
-    position: 'absolute',
-    top: 15,
-    left: 15,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: '#F5EFE6', justifyContent: 'center', alignItems: 'center',
   },
-  scrollContent: {
-    paddingBottom: 40,
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerTitle: {
+    fontSize: 18, fontFamily: 'Outfit_700Bold', color: '#2C1206', marginHorizontal: 6,
   },
-  formCard: {
-    paddingHorizontal: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-    marginBottom: 10,
-  },
-  inputGroup: {
-    marginBottom: 25,
-  },
+
+  /* Scroll */
+  scroll: { paddingBottom: 50, paddingTop: 8 },
+  form:   { paddingHorizontal: 18 },
+
+  /* Inputs */
+  inputGroup: { marginBottom: 22 },
+  label:      { fontSize: 15, fontFamily: 'Outfit_700Bold', color: '#2C1206', marginBottom: 8 },
   input: {
-    backgroundColor: '#FFF',
-    height: 55,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
-    color: '#333',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    backgroundColor: '#FFF', height: 52, borderRadius: 12, paddingHorizontal: 14,
+    fontSize: 14, fontFamily: 'Outfit_400Regular', color: '#333',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  horizontalScroll: {
-    marginHorizontal: -5,
+
+  inputIcon:     { flexDirection: 'row', alignItems: 'center' },
+  inputIconImg:  { position: 'absolute', left: 14, zIndex: 1 },
+  inputWithIcon: { flex: 1, paddingLeft: 38 },
+
+  pickerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#FFF', height: 52, borderRadius: 12, paddingHorizontal: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
+  pickerText: { fontSize: 14, fontFamily: 'Outfit_400Regular', color: '#333' },
+  placeholder: { color: '#BBB' },
+
+  row: { flexDirection: 'row' },
+
+  /* Type / Dress Cards */
   typeCard: {
-    width: 90,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 10,
-    marginHorizontal: 5,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    width: 84, backgroundColor: '#FFF', borderRadius: 14, padding: 10,
+    marginRight: 10, alignItems: 'center',
+    borderWidth: 1.5, borderColor: 'transparent',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  activeCard: {
-    borderColor: '#FFD700',
-  },
-  typeIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  activeIconContainer: {
-    backgroundColor: '#2C1206',
-  },
-  typeLabel: {
-    fontSize: 11,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#2C1206',
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  priceTag: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  priceTagText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-  },
-  costCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 20,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5,
-  },
-  costTitle: {
-    fontSize: 18,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-    marginBottom: 15,
-  },
-  costDetail: {
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
-    color: '#666',
-    marginBottom: 5,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#EEE',
-    marginVertical: 15,
-  },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-    marginRight: 10,
-  },
-  totalValue: {
-    fontSize: 20,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-  },
+  activeCard:    { borderColor: '#FFD700' },
+  iconBox:       { width: 54, height: 54, borderRadius: 12, backgroundColor: '#F5F5F5', justifyContent:'center', alignItems:'center', marginBottom: 6 },
+  iconBoxActive: { backgroundColor: '#2C1206' },
+  typeLabel:     { fontSize: 10, fontFamily: 'Outfit_600SemiBold', color: '#2C1206', textAlign:'center' },
+
+  /* Cost Card */
+  costCard:   { backgroundColor: '#FFF', borderRadius: 20, marginTop: 4, overflow: 'hidden', shadowColor:'#000', shadowOffset:{width:0,height:5}, shadowOpacity:0.1, shadowRadius:15, elevation:5 },
+  costHeader: { paddingVertical: 16, paddingHorizontal: 20 },
+  costHeaderText: { fontSize: 16, fontFamily: 'Outfit_700Bold', color: '#FFF' },
+  costBody:   { padding: 20 },
+  costRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  costLbl:    { fontSize: 13, fontFamily: 'Outfit_400Regular', color: '#666' },
+  costVal:    { fontSize: 13, fontFamily: 'Outfit_600SemiBold', color: '#444' },
+  divider:    { height: 1, backgroundColor: '#EEE', marginVertical: 12 },
+
   advanceBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFF9E6',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    flexDirection: 'row', justifyContent: 'space-between',
+    backgroundColor: '#FFF9E6', padding: 14, borderRadius: 10, marginBottom: 6,
   },
-  advanceLabel: {
-    fontSize: 14,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-  },
-  advanceValue: {
-    fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-  },
-  balanceText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_400Regular',
-    color: '#666',
-    textAlign: 'right',
-    marginBottom: 20,
-  },
-  couponGroup: {
-    marginBottom: 25,
-  },
-  couponLabel: {
-    fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
-    color: '#2C1206',
-    marginBottom: 10,
-  },
+  advLbl: { fontSize: 13, fontFamily: 'Outfit_700Bold', color: '#2C1206' },
+  advVal: { fontSize: 14, fontFamily: 'Outfit_700Bold', color: '#2C1206' },
+  balText:{ fontSize: 11, fontFamily: 'Outfit_400Regular', color: '#888', textAlign: 'right', marginBottom: 18 },
+
   couponInput: {
-    backgroundColor: '#FFF',
-    height: 50,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: '#EEE',
-    fontSize: 14,
-    fontFamily: 'Outfit_400Regular',
+    height: 48, borderRadius: 10, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: '#EEE',
+    fontSize: 13, fontFamily: 'Outfit_400Regular', color: '#333',
+    backgroundColor: '#FAFAFA',
   },
+
   payBtn: {
-    backgroundColor: '#7B3F00',
-    height: 55,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#7B3F00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    flexDirection: 'row', backgroundColor: '#7B3F00',
+    height: 54, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
+    marginTop: 18,
+    shadowColor: '#7B3F00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 6,
   },
-  payBtnText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontFamily: 'Outfit_700Bold',
-  },
+  payBtnText: { color: '#FFF', fontSize: 15, fontFamily: 'Outfit_700Bold' },
 });
 
 export default AddEvent;

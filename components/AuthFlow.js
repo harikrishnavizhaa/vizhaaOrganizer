@@ -65,6 +65,7 @@ const AuthFlow = () => {
     return (
       <PhoneEntry
         onNext={(num) => {
+          console.log(`[AuthFlow] Switching to OTP screen for: ${num}`);
           setPhone(num);
           setScreen('otp');
         }}

@@ -127,6 +127,10 @@ const AppContent = () => {
       <Dashboard 
         onAddEvent={() => setCurrentScreen('add-event')} 
         onNavigate={(screen) => setCurrentScreen(screen)}
+        onEventPress={(event) => {
+          setTempEventData(event);
+          setCurrentScreen('event-tracking');
+        }}
       />
     );
   }

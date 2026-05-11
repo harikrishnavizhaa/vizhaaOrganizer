@@ -50,4 +50,11 @@ export const api = {
   refresh:         (refreshToken) => request('/api/auth/refresh',          { method: 'POST', body: JSON.stringify({ refreshToken }) }),
   logout:          (refreshToken) => request('/api/auth/logout',           { method: 'POST', body: JSON.stringify({ refreshToken }) }),
   completeProfile: (data)         => request('/api/organizer/profile',    { method: 'POST', body: JSON.stringify(data) }),
+  createEvent:     (data)         => request('/api/events',               { method: 'POST', body: JSON.stringify(data) }),
+  getEvents:       ()             => request('/api/events',               { method: 'GET' }),
+  getEventDetail:  (id)           => request(`/api/events/${id}`,         { method: 'GET' }),
+
+  // Payments
+  createPaymentOrder: (amount) => request('/api/payments/order', { method: 'POST', body: JSON.stringify({ amount }) }),
+  verifyPayment: (data) => request('/api/payments/verify', { method: 'POST', body: JSON.stringify(data) }),
 };

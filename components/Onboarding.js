@@ -103,12 +103,12 @@ const Onboarding = ({ onComplete }) => {
       </View>
 
       {/* HEADER — logo + brand name */}
-      <View style={styles.fixedHeader} pointerEvents="none">
+      {/* <View style={styles.fixedHeader} pointerEvents="none">
         <View style={styles.logoRow}>
           <Image source={logoAsset} style={styles.logoIcon} contentFit="contain" />
           <Text style={styles.logoName}>vizhaa</Text>
         </View>
-      </View>
+      </View> */}
 
       {/* LOTTIE ANIMATION BACKGROUND */}
       <View style={styles.lottieContainer} pointerEvents="none">

@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import BlobBackground from './BlobBackground';
 
-const OTPScreen = ({ phone = '', onVerify, onResend, onSuccess, onChangePhone }) => {
-  const [otp, setOtp] = useState(['', '', '', '']);
+const OTPScreen = ({ phone = '', onSendOtp, onVerify, onResend, onSuccess, onChangePhone }) => {
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   // 'fetching' → OTP being sent, 'input' → user types, 'validating' → API call in progress
   const [phase, setPhase] = useState('fetching');
   const [resend, setResend] = useState(5);
@@ -16,14 +16,31 @@ const OTPScreen = ({ phone = '', onVerify, onResend, onSuccess, onChangePhone })
   const r1 = useRef(null);
   const r2 = useRef(null);
   const r3 = useRef(null);
-  const refs = [r0, r1, r2, r3];
+  const r4 = useRef(null);
+  const r5 = useRef(null);
+  const refs = [r0, r1, r2, r3, r4, r5];
 
-  // TESTING MODE: skip OTP send, go straight to input
+  // Real mode: send OTP on mount
   useEffect(() => {
-    setPhase('input');
-    setResend(0);
-    r0.current?.focus();
-  }, []);
+    if (!phone) {
+      console.log('[OTPScreen] No phone number provided, skipping auto-send');
+      return;
+    }
+    const triggerSend = async () => {
+      try {
+        console.log(`[OTPScreen] Triggering initial OTP send to: ${phone}`);
+        await onSendOtp();
+        console.log('[OTPScreen] Initial OTP sent successfully');
+        setPhase('input');
+        setResend(59);
+      } catch (err) {
+        console.error('[OTPScreen] Initial OTP send failed:', err);
+        setPhase('input'); // allow manual retry
+        setSendError(err.message || 'Failed to send OTP');
+      }
+    };
+    triggerSend();
+  }, [phone]);
 
   // Countdown timer
   useEffect(() => {
@@ -37,7 +54,7 @@ const OTPScreen = ({ phone = '', onVerify, onResend, onSuccess, onChangePhone })
     next[i] = val.replace(/[^0-9]/g, '').slice(-1);
     setOtp(next);
     setError('');
-    if (next[i] && i < 3) refs[i + 1].current?.focus();
+    if (next[i] && i < 5) refs[i + 1].current?.focus();
   };
 
   const handleKeyPress = (key, i) => {
@@ -52,7 +69,7 @@ const OTPScreen = ({ phone = '', onVerify, onResend, onSuccess, onChangePhone })
   const filled = otp.filter(Boolean).length;
 
   const handleVerify = async () => {
-    if (filled < 4) { setError('Please enter all 4 digits'); return; }
+    if (filled < 6) { setError('Please enter all 6 digits'); return; }
     setPhase('validating');
     try {
       const data = await onVerify(otp.join(''));
@@ -112,7 +129,7 @@ const OTPScreen = ({ phone = '', onVerify, onResend, onSuccess, onChangePhone })
         <View style={styles.otpRow}>
           {otp.map((digit, i) => {
             const isActive = phase === 'input' && filled === i;
-            const hasError = !!error && i === 3 && !digit;
+            const hasError = !!error && i === 5 && !digit;
             return (
               <View
                 key={i}
@@ -216,15 +233,15 @@ const styles = StyleSheet.create({
 
   otpRow: {
     flexDirection: 'row',
-    gap: 14,
+    gap: 8,
     marginTop: 24,
     marginBottom: 18,
   },
 
   otpBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
+    width: 42,
+    height: 52,
+    borderRadius: 10,
     backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
