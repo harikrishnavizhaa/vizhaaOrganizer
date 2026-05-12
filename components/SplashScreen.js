@@ -24,7 +24,7 @@ const SplashScreen = ({ onFinish }) => {
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <Image
-        source={require('../assets/logo.svg')}
+        source={require('../assets/splashscreen/vizhaa_logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -35,7 +35,7 @@ const SplashScreen = ({ onFinish }) => {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFF',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,

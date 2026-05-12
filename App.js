@@ -20,7 +20,7 @@ import StatusScreen from './components/StatusScreen';
 import HistoryScreen from './components/HistoryScreen';
 import HistoryDetails from './components/HistoryDetails';
 import EventTracking from './components/EventTracking';
-import SplashScreenComp from './components/SplashScreen';
+
 import PaymentTab from './components/PaymentTab';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -29,7 +29,7 @@ SplashScreen.preventAutoHideAsync();
 // Inner component so it can read AuthContext
 const AppContent = () => {
   const { user, loading } = useAuth();
-  const [showSplash, setShowSplash] = useState(true);
+
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [currentScreen, setCurrentScreen] = useState('dashboard');
   const [tempEventData, setTempEventData] = useState(null);
@@ -38,9 +38,7 @@ const AppContent = () => {
   // While checking stored token, show blank screen (SplashScreen is still visible)
   if (loading) return <View style={{ flex: 1, backgroundColor: '#FFF' }} />;
 
-  if (showSplash) {
-    return <SplashScreenComp onFinish={() => setShowSplash(false)} />;
-  }
+
 
   // Token was valid — go straight to Dashboard
   if (user) {

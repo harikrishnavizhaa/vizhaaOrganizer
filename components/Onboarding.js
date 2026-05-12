@@ -15,28 +15,35 @@ import OnboardingSlide from './OnboardingSlide';
 
 const { width, height } = Dimensions.get('window');
 
-const logoAsset = require('../assets/logo.svg');
+const logoAsset = require('../assets/splashscreen/vizhaa_logo.png');
 const manAsset = require('../assets/splashscreen/man.svg');
 const popperAsset = require('../assets/splashscreen/sml_popper.svg');
 const bgCircleAsset = require('../assets/splashscreen/bg_Circle.svg');
+const decorAsset = require('../assets/splashscreen/decor.png');
+const UNIFIED_FOOD_POSITIONS = [
+  { top: '28%', left: '6%', width: 105, height: 105 },   // Top-Left
+  { top: '25%', right: '6%', width: 105, height: 105 },  // Top-Right
+  { bottom: '1%', right: '35%', width: 105, height: 105 } // Bottom-Right
+];
+
 const FOOD_DATA = [
   // Slide 0
   [
-    { source: require('../assets/splashscreen/food/fp1.png'), style: { top: '20%', left: '33%', width: 65, height: 65 } },
-    { source: require('../assets/splashscreen/food/fp2.png'), style: { top: '48%', left: '5%', width: 60, height: 60 } },
-    { source: require('../assets/splashscreen/food/fp3.png'), style: { bottom: '33%', right: '5%', width: 70, height: 70 } },
+    { source: require('../assets/splashscreen/food/fp1.png'), style: UNIFIED_FOOD_POSITIONS[0] },
+    { source: require('../assets/splashscreen/food/fp2.png'), style: UNIFIED_FOOD_POSITIONS[1] },
+    { source: require('../assets/splashscreen/food/fp3.png'), style: UNIFIED_FOOD_POSITIONS[2] },
   ],
   // Slide 1
   [
-    { source: require('../assets/splashscreen/food/fp4.png'), style: { top: '32%', left: '10%', width: 55, height: 55 } },
-    { source: require('../assets/splashscreen/food/fp5.png'), style: { top: '25%', right: '12%', width: 60, height: 60 } },
-    { source: require('../assets/splashscreen/food/fp6.png'), style: { bottom: '30%', right: '5%', width: 65, height: 65 } },
+    { source: require('../assets/splashscreen/food/fp4.png'), style: UNIFIED_FOOD_POSITIONS[0] },
+    { source: require('../assets/splashscreen/food/fp5.png'), style: UNIFIED_FOOD_POSITIONS[1] },
+    { source: require('../assets/splashscreen/food/fp6.png'), style: UNIFIED_FOOD_POSITIONS[2] },
   ],
   // Slide 2
   [
-    { source: require('../assets/splashscreen/food/fp7.png'), style: { top: '32%', left: '8%', width: 60, height: 60 } },
-    { source: require('../assets/splashscreen/food/fp8.png'), style: { top: '28%', right: '8%', width: 55, height: 55 } },
-    { source: require('../assets/splashscreen/food/fp9.png'), style: { bottom: '30%', right: '15%', width: 55, height: 55 } },
+    { source: require('../assets/splashscreen/food/fp7.png'), style: UNIFIED_FOOD_POSITIONS[0] },
+    { source: require('../assets/splashscreen/food/fp8.png'), style: UNIFIED_FOOD_POSITIONS[1] },
+    { source: require('../assets/splashscreen/food/fp9.png'), style: UNIFIED_FOOD_POSITIONS[2] },
   ]
 ];
 
@@ -56,8 +63,8 @@ const slides = [
 ];
 
 const POPPER_POSITIONS = [
-  { top: '22%', right: '4%' },
-  { bottom: '34%', left: '2%' },
+  { top: '30%', right: '2%' },
+  { bottom: '25%', left: '1%' },
 ];
 
 const AnimatedFoodItem = ({ source, style, delay = 0, counterRotate }) => {
@@ -120,7 +127,7 @@ const Onboarding = ({ onComplete }) => {
     orbitAnim.setValue(0);
     Animated.timing(orbitAnim, {
       toValue: 1,
-      duration: 1800,
+      duration: 2200,
       useNativeDriver: true,
     }).start();
   }, [currentPage]);
@@ -165,38 +172,39 @@ const Onboarding = ({ onComplete }) => {
       </View>
 
       {/* HEADER — logo + brand name */}
-      {/* <View style={styles.fixedHeader} pointerEvents="none">
-        <View style={styles.logoRow}>
+      <View style={styles.fixedHeader} pointerEvents="none">
+        <View style={styles.logoCol}>
           <Image source={logoAsset} style={styles.logoIcon} contentFit="contain" />
           <Text style={styles.logoName}>vizhaa</Text>
         </View>
-      </View> */}
+      </View>
 
       {/* CENTER AVATAR & FLOATING FOOD */}
       <View style={styles.avatarContainer} pointerEvents="none">
         {POPPER_POSITIONS.map((pos, index) => (
           <Image key={index} source={popperAsset} style={[styles.popper, pos]} contentFit="contain" />
         ))}
-        
+
         <Image source={manAsset} style={styles.centerAvatar} contentFit="contain" />
+        <Image source={decorAsset} style={styles.decorOverlay} contentFit="contain" />
 
         <Animated.View style={[styles.orbitContainer, { transform: [{ rotate: ringRotate }] }]} pointerEvents="none">
-          <AnimatedFoodItem 
-            source={currentFoods[0].source} 
-            style={[styles.foodItem, currentFoods[0].style]} 
-            delay={0} 
+          <AnimatedFoodItem
+            source={currentFoods[0].source}
+            style={[styles.foodItem, currentFoods[0].style]}
+            delay={0}
             counterRotate={counterRotate}
           />
-          <AnimatedFoodItem 
-            source={currentFoods[1].source} 
-            style={[styles.foodItem, currentFoods[1].style]} 
-            delay={800} 
+          <AnimatedFoodItem
+            source={currentFoods[1].source}
+            style={[styles.foodItem, currentFoods[1].style]}
+            delay={800}
             counterRotate={counterRotate}
           />
-          <AnimatedFoodItem 
-            source={currentFoods[2].source} 
-            style={[styles.foodItem, currentFoods[2].style]} 
-            delay={1600} 
+          <AnimatedFoodItem
+            source={currentFoods[2].source}
+            style={[styles.foodItem, currentFoods[2].style]}
+            delay={1600}
             counterRotate={counterRotate}
           />
         </Animated.View>
@@ -273,37 +281,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
+    top: -85,
   },
 
   // ─── Header ───────────────────────────────────────────────
   fixedHeader: {
     position: 'absolute',
-    top: 56,
+    top: 75,
     width: '100%',
     alignItems: 'center',
     zIndex: 100,
   },
-  logoRow: {
-    flexDirection: 'row',
+  logoCol: {
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   logoIcon: {
-    width: 32,
-    height: 40,
+    width: 44,
+    height: 44,
   },
   logoName: {
     fontSize: 28,
     fontFamily: 'Outfit_700Bold',
     color: '#2C1206',
-    letterSpacing: -0.8,
+    letterSpacing: 1,
   },
   avatarContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    top: -80,
+    top: -170,
   },
   orbitContainer: {
     position: 'absolute',
@@ -311,15 +319,24 @@ const styles = StyleSheet.create({
     height: width * 1.2,
   },
   centerAvatar: {
-    width: width * 0.45,
-    height: width * 0.45,
+    width: width * 0.55,
+    height: width * 0.55,
     zIndex: 2,
-    marginTop: 15,
+    marginTop: 60,
+    marginLeft: 35,
+  },
+  decorOverlay: {
+    position: 'absolute',
+    width: width * 0.90,
+    height: width * 0.90,
+    zIndex: 0,
+    marginTop: 60,
+    marginLeft: 35,
   },
   popper: {
     position: 'absolute',
-    width: 50,
-    height: 50,
+    width: 120,
+    height: 120,
     opacity: 0.8,
   },
   foodItem: {
