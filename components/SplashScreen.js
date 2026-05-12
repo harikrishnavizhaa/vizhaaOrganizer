@@ -1,31 +1,32 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Animated } from 'react-native';
-import LottieView from 'lottie-react-native';
+import { View, Image, StyleSheet, Animated, Dimensions } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const SplashScreen = ({ onFinish }) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const handleAnimationFinish = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 500,
-      useNativeDriver: true,
-    }).start(() => {
-      if (onFinish) onFinish();
-    });
-  };
+  useEffect(() => {
+    // Show logo for 2 seconds, then fade out
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        if (onFinish) onFinish();
+      });
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <LottieView
-        source={require('../assets/splashscreen/animation.json')}
-        autoPlay
-        loop={false}
-        onAnimationFinish={handleAnimationFinish}
-        style={styles.lottie}
-        resizeMode="cover"
+      <Image
+        source={require('../assets/logo.svg')}
+        style={styles.logo}
+        resizeMode="contain"
       />
     </Animated.View>
   );
@@ -39,9 +40,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 9999,
   },
-  lottie: {
-    width: width,
-    height: height,
+  logo: {
+    width: width * 0.45,
+    height: width * 0.45,
   },
 });
 

@@ -48,6 +48,7 @@ const AppContent = () => {
       return (
         <AddEvent 
           onBack={() => setCurrentScreen('dashboard')} 
+          initialData={tempEventData}
           onProceed={(data) => {
             setTempEventData(data);
             setCurrentScreen('payment');

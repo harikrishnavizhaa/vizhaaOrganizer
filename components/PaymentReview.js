@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
-const RAZORPAY_KEY_ID = 'rzp_test_XXXXXXXXXXXXXX'; // Use your test key here
+const RAZORPAY_KEY_ID = 'rzp_test_SoBnImPo5EpkWt'; 
 
 const PaymentReview = ({ eventData, onBack, onPay }) => {
   const { user } = useAuth();
@@ -32,6 +32,56 @@ const PaymentReview = ({ eventData, onBack, onPay }) => {
   
   const advanceAmount = totalAmount * 0.25;
   const currentPayAmount = paymentType === 'total' ? totalAmount : advanceAmount;
+
+  // ─── TEST MODE BYPASS ──────────────────────────────────────────────────────
+  // Since Razorpay native module fails in Expo Go, we add a bypass for testing.
+  const handleSimulatedSuccess = async () => {
+    setIsSubmitting(true);
+    try {
+      console.log('[Test Mode] Simulating payment success...');
+      
+      // We manually construct a payload that tells the backend "payment is done"
+      // Note: In production, the backend verifies the signature. 
+      // For this test, we'll assume the backend has a "test mode" or we mock it.
+      const mockPayload = {
+        razorpay_order_id: 'test_order_' + Date.now(),
+        razorpay_payment_id: 'test_pay_' + Date.now(),
+        razorpay_signature: 'test_sig_manual',
+        isTest: true, // Tell backend this is a manual test bypass
+        eventData: {
+          name: eventData.eventName,
+          type: eventData.eventType,
+          location: eventData.location,
+          inDate: eventData.inDate,
+          inTime: eventData.inTime,
+          outDate: eventData.outDate,
+          outTime: eventData.outTime,
+          suppliers: parseInt(eventData.suppliers) || 0,
+          dressCode: eventData.dressCode,
+          services: eventData.selectedSvcs || [],
+          costPerHead: parseFloat(eventData.costPerHead) || 0,
+          totalCost: (parseFloat(eventData.costPerHead) || 0) * (parseInt(eventData.suppliers) || 0),
+          advancePaid: paymentType === 'total' ? 
+            (parseFloat(eventData.costPerHead) || 0) * (parseInt(eventData.suppliers) || 0) : 
+            ((parseFloat(eventData.costPerHead) || 0) * (parseInt(eventData.suppliers) || 0) * 0.25)
+        }
+      };
+
+      const verifyRes = await api.verifyPayment(mockPayload);
+      if (verifyRes.success) {
+        Alert.alert('Test Success', 'SIMULATED payment confirmed!', [
+          { text: 'Great!', onPress: () => onPay(mockPayload.eventData.advancePaid) }
+        ]);
+      } else {
+        throw new Error(verifyRes.message || 'Verification failed');
+      }
+    } catch (err) {
+      Alert.alert('Test Error', err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  // ──────────────────────────────────────────────────────────────────────────
 
   const handlePay = async () => {
     setIsSubmitting(true);
@@ -75,8 +125,9 @@ const PaymentReview = ({ eventData, onBack, onPay }) => {
             name: eventData.eventName,
             type: eventData.eventType,
             location: eventData.location,
-            date: eventData.date,
+            inDate: eventData.inDate,
             inTime: eventData.inTime,
+            outDate: eventData.outDate,
             outTime: eventData.outTime,
             suppliers: suppliersCount,
             dressCode: eventData.dressCode,
@@ -99,8 +150,9 @@ const PaymentReview = ({ eventData, onBack, onPay }) => {
 
       }).catch((error) => {
         // 4. Payment Failure/Cancellation
-        console.log('[Payment] Error:', error);
-        Alert.alert('Payment Cancelled', error.description || 'You cancelled the payment process.');
+        console.log('[Payment] Error Object:', JSON.stringify(error));
+        const errMsg = error.description || `Error Code: ${error.code || 'Unknown'}`;
+        Alert.alert('Payment Issue', errMsg);
       });
 
     } catch (err) {
@@ -145,9 +197,11 @@ const PaymentReview = ({ eventData, onBack, onPay }) => {
             <DetailItem label="Event Name" value={eventData?.eventName} />
             <DetailItem label="Event Type" value={eventData?.eventType} />
             <DetailItem label="Location" value={eventData?.location} />
-            <DetailItem label="Date" value={eventData?.date} />
-            <DetailItem label="Time" value={`${eventData?.inTime || '—'} to ${eventData?.outTime || '—'}`} />
             <DetailItem label="Suppliers" value={eventData?.suppliers} />
+            <DetailItem label="In Date" value={eventData?.inDate} />
+            <DetailItem label="Out Date" value={eventData?.outDate} />
+            <DetailItem label="In Time" value={eventData?.inTime} />
+            <DetailItem label="Out Time" value={eventData?.outTime} />
           </View>
         </View>
 
@@ -181,6 +235,15 @@ const PaymentReview = ({ eventData, onBack, onPay }) => {
             <LinearGradient colors={['#7B3F00', '#5C2E00']} style={styles.payGradient}>
               {isSubmitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.payBtnText}>Confirm and Pay ₹{currentPayAmount.toLocaleString()}</Text>}
             </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Test Mode Button - Only for Expo Go / Dev */}
+          <TouchableOpacity 
+            style={[styles.testBtn, isSubmitting && { opacity: 0.5 }]} 
+            onPress={handleSimulatedSuccess}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.testBtnText}>[DEV] Simulate Success</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -237,6 +300,21 @@ const styles = StyleSheet.create({
   payBtn: { height: 55, borderRadius: 12, overflow: 'hidden', elevation: 5 },
   payGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   payBtnText: { color: '#FFF', fontSize: 16, fontFamily: 'Outfit_700Bold' },
+  testBtn: {
+    marginTop: 15,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    backgroundColor: '#F9F9F9',
+  },
+  testBtnText: {
+    color: '#999',
+    fontSize: 13,
+    fontFamily: 'Outfit_600SemiBold',
+  },
 });
 
 export default PaymentReview;

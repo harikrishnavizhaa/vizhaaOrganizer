@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TextInput, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
   Dimensions,
   ImageBackground,
   RefreshControl,
@@ -22,9 +22,11 @@ const { width } = Dimensions.get('window');
 
 const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
   const { user } = useAuth();
-  const userName = user?.name?.split(' ')[0] || 'Vijay';
+  const userName = user?.name || 'User';
 
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -33,6 +35,7 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
       const res = await api.getEvents();
       if (res.success) {
         setEvents(res.events || []);
+        setFilteredEvents(res.events || []);
       }
     } catch (err) {
       console.error('Fetch Dashboard Events Error:', err);
@@ -46,25 +49,39 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
     fetchEvents();
   }, [fetchEvents]);
 
+  // Search Logic
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredEvents(events);
+    } else {
+      const filtered = events.filter(e =>
+        e.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        e.type?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredEvents(filtered);
+    }
+  }, [searchQuery, events]);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchEvents();
   };
 
-  const activeEvents = events.filter(e => e.status === 'In Progress');
-  const upcomingEvents = events.filter(e => e.status === 'Upcoming');
+  const activeEvents = filteredEvents.filter(e => e.status === 'In Progress');
+  const upcomingEvents = filteredEvents.filter(e => e.status === 'Upcoming');
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#7B3F00']} />}
       >
-        
+
         {/* Header Section */}
-        <LinearGradient 
-          colors={['#2C1206', '#5C2E00']} 
+        <LinearGradient
+          colors={['#2C1206', '#5C2E00']}
           style={styles.header}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -97,10 +114,12 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={20} color="#999" />
-            <TextInput 
-              placeholder="Search your events..." 
+            <TextInput
+              placeholder="Search your events..."
               style={styles.searchInput}
               placeholderTextColor="#BBB"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
         </View>
@@ -122,9 +141,9 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
                 </View>
 
                 {activeEvents.slice(0, 1).map(event => (
-                  <TouchableOpacity 
-                    key={event.id} 
-                    style={styles.activeCardContainer} 
+                  <TouchableOpacity
+                    key={event.id}
+                    style={styles.activeCardContainer}
                     activeOpacity={0.9}
                     onPress={() => onEventPress(event)}
                   >
@@ -134,9 +153,9 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
                     >
                       <View style={styles.cardTop}>
                         <View style={[styles.typeBadge, { backgroundColor: '#FFD70022' }]}>
-                          <MaterialCommunityIcons 
-                            name={event.type === 'wedding' ? 'ring' : event.type === 'corporate' ? 'briefcase' : 'party-popper'} 
-                            size={16} color="#7B3F00" 
+                          <MaterialCommunityIcons
+                            name={event.type === 'wedding' ? 'ring' : event.type === 'corporate' ? 'briefcase' : 'party-popper'}
+                            size={16} color="#7B3F00"
                           />
                           <Text style={styles.typeBadgeText}>{event.type}</Text>
                         </View>
@@ -158,8 +177,8 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
                           <Text style={styles.progressValue}>{Math.round((event.progress || 0) * 100)}%</Text>
                         </View>
                         <View style={styles.progressBarBg}>
-                          <LinearGradient 
-                            colors={['#7B3F00', '#B08040']} 
+                          <LinearGradient
+                            colors={['#7B3F00', '#B08040']}
                             style={[styles.progressBarFill, { width: `${(event.progress || 0) * 100}%` }]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
@@ -195,8 +214,8 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.upcomingScroll}>
                   {upcomingEvents.map(event => (
-                    <TouchableOpacity 
-                      key={event.id} 
+                    <TouchableOpacity
+                      key={event.id}
                       style={styles.upcomingCard}
                       onPress={() => onEventPress(event)}
                     >
@@ -214,16 +233,6 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
                       </View>
                     </TouchableOpacity>
                   ))}
-                  
-                  <TouchableOpacity style={styles.addSmallCard} onPress={onAddEvent}>
-                    <LinearGradient
-                      colors={['#F5EFE6', '#E8DFD3']}
-                      style={styles.addSmallInner}
-                    >
-                      <Ionicons name="add-circle" size={32} color="#7B3F00" />
-                      <Text style={styles.addSmallText}>Add Event</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
                 </ScrollView>
               </>
             )}
@@ -260,6 +269,23 @@ const Dashboard = ({ onAddEvent, onNavigate, onEventPress }) => {
       </ScrollView>
 
       <BottomTabBar activeTab="dashboard" onNavigate={onNavigate} />
+
+      {/* Premium Extended Floating Action Button (FAB) */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={onAddEvent}
+        activeOpacity={0.9}
+      >
+        <LinearGradient
+          colors={['#7B3F00', '#4A2600']}
+          style={styles.fabGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Ionicons name="add" size={24} color="#FFF" />
+          <Text style={styles.fabText}>Add Event</Text>
+        </LinearGradient>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -672,6 +698,32 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     fontFamily: 'Outfit_700Bold',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    height: 54,
+    borderRadius: 27,
+    shadowColor: '#2C1206',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  fabGradient: {
+    flex: 1,
+    borderRadius: 27,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    gap: 8,
+  },
+  fabText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontFamily: 'Outfit_700Bold',
+    letterSpacing: 0.5,
   },
 });
 
