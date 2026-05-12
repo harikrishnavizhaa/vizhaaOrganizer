@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Dimensions, SafeAreaView, ActivityIndicator, Alert
+  Dimensions, SafeAreaView, ActivityIndicator, Alert, Animated
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import BlobBackground from './BlobBackground';
 
 const { width } = Dimensions.get('window');
@@ -20,6 +21,18 @@ const BUSINESS_TYPES = [
 const BusinessTypeSelection = ({ onDone }) => {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
+  const scales = useRef(BUSINESS_TYPES.reduce((acc, curr) => {
+    acc[curr.id] = new Animated.Value(1);
+    return acc;
+  }, {})).current;
+
+  const handlePress = (id) => {
+    setSelected(id);
+    Animated.sequence([
+      Animated.timing(scales[id], { toValue: 0.96, duration: 100, useNativeDriver: true }),
+      Animated.timing(scales[id], { toValue: 1, duration: 100, useNativeDriver: true }),
+    ]).start();
+  };
 
   const handleFinish = async () => {
     if (!selected) {
@@ -28,7 +41,6 @@ const BusinessTypeSelection = ({ onDone }) => {
     }
     setLoading(true);
     try {
-      // Pass the selected type back to AuthFlow
       onDone(selected);
     } catch (error) {
       Alert.alert('Error', 'Failed to save your selection. Please try again.');
@@ -50,28 +62,31 @@ const BusinessTypeSelection = ({ onDone }) => {
           {BUSINESS_TYPES.map((type) => {
             const isSelected = selected === type.id;
             return (
-              <TouchableOpacity
-                key={type.id}
-                style={[styles.card, isSelected && styles.cardSelected]}
-                onPress={() => setSelected(type.id)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconWrap, isSelected && styles.iconWrapSelected]}>
-                  <Ionicons 
-                    name={type.icon} 
-                    size={28} 
-                    color={isSelected ? '#FFF' : '#FFB300'} 
-                  />
-                </View>
-                <Text style={[styles.cardLabel, isSelected && styles.cardLabelSelected]}>
-                  {type.label}
-                </Text>
-                {isSelected && (
-                  <View style={styles.checkWrap}>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFB300" />
-                  </View>
-                )}
-              </TouchableOpacity>
+              <Animated.View key={type.id} style={{ transform: [{ scale: scales[type.id] }] }}>
+                <TouchableOpacity
+                  style={[styles.cardContainer, isSelected && styles.cardSelected]}
+                  onPress={() => handlePress(type.id)}
+                  activeOpacity={0.9}
+                >
+                  <BlurView intensity={isSelected ? 40 : 20} tint="light" style={styles.card}>
+                    <View style={[styles.iconWrap, isSelected && styles.iconWrapSelected]}>
+                      <Ionicons 
+                        name={type.icon} 
+                        size={28} 
+                        color={isSelected ? '#FFF' : '#FFB300'} 
+                      />
+                    </View>
+                    <Text style={[styles.cardLabel, isSelected && styles.cardLabelSelected]}>
+                      {type.label}
+                    </Text>
+                    {isSelected && (
+                      <View style={styles.checkWrap}>
+                        <Ionicons name="checkmark-circle" size={24} color="#FFB300" />
+                      </View>
+                    )}
+                  </BlurView>
+                </TouchableOpacity>
+              </Animated.View>
             );
           })}
         </View>
@@ -96,7 +111,6 @@ const BusinessTypeSelection = ({ onDone }) => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -111,49 +125,55 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontFamily: 'Outfit_700Bold',
     color: '#111',
-    lineHeight: 34,
-    marginBottom: 8,
+    lineHeight: 38,
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Outfit_400Regular',
-    color: '#666',
-    lineHeight: 22,
+    color: '#555',
+    lineHeight: 24,
   },
   grid: {
     gap: 16,
     marginBottom: 40,
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F8F8',
+  cardContainer: {
     borderRadius: 20,
-    padding: 16,
-    borderWidth: 2,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1.5,
     borderColor: 'transparent',
-    position: 'relative',
-  },
-  cardSelected: {
-    borderColor: '#FFB300',
-    backgroundColor: '#FFF',
-    shadowColor: '#FFB300',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
   },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 18,
+  },
+  cardSelected: {
+    borderColor: '#FFB300',
+    backgroundColor: 'rgba(255, 179, 0, 0.05)',
+    shadowColor: '#FFB300',
+    shadowOpacity: 0.2,
+    elevation: 8,
+  },
   iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 179, 0, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 18,
   },
   iconWrapSelected: {
     backgroundColor: '#FFB300',
@@ -163,23 +183,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_600SemiBold',
     color: '#333',
     flex: 1,
+    letterSpacing: 0.2,
   },
   cardLabelSelected: {
     color: '#111',
   },
   checkWrap: {
     position: 'absolute',
-    right: 16,
-    top: 16,
+    right: 18,
+    top: 18,
   },
   btn: {
-    height: 56,
+    height: 58,
     borderRadius: 16,
     overflow: 'hidden',
     marginTop: 'auto',
+    marginBottom: 10,
   },
   btnDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   btnGradient: {
     flex: 1,
@@ -188,9 +210,11 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 0.5,
   },
 });
+
 
 export default BusinessTypeSelection;

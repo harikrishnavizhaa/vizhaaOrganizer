@@ -3,6 +3,8 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import BlobBackground from './BlobBackground';
 import { api } from '../services/api';
 
@@ -56,40 +58,47 @@ const CompleteProfile = ({ onDone }) => {
         keyboardShouldPersistTaps="handled"
       >
         <BlobBackground />
-        <View style={styles.card}>
-          <Text style={styles.title}>Complete Profile</Text>
-          <Text style={styles.subtitle}>Tell us about your business to continue</Text>
+        <View style={styles.cardContainer}>
+          <BlurView intensity={80} tint="light" style={styles.card}>
+            <Text style={styles.title}>Complete Profile</Text>
+            <Text style={styles.subtitle}>Tell us about your business to continue</Text>
 
-          <Text style={styles.sectionLabel}>REQUIRED</Text>
-          <Field label="Full Name" value={form.name} onChangeText={set('name')} placeholder="John Doe" />
-          <Field label="Company Name" value={form.companyName} onChangeText={set('companyName')} placeholder="Vizhaa Events" />
-          <Field
-            label="Email"
-            value={form.email}
-            onChangeText={set('email')}
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <Field label="City" value={form.city} onChangeText={set('city')} placeholder="Chennai" />
+            <Text style={styles.sectionLabel}>REQUIRED</Text>
+            <Field label="Full Name" value={form.name} onChangeText={set('name')} placeholder="John Doe" />
+            <Field label="Company Name" value={form.companyName} onChangeText={set('companyName')} placeholder="Vizhaa Events" />
+            <Field
+              label="Email"
+              value={form.email}
+              onChangeText={set('email')}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <Field label="City" value={form.city} onChangeText={set('city')} placeholder="Chennai" />
 
-          <Text style={[styles.sectionLabel, { marginTop: 18 }]}>OPTIONAL</Text>
-          <Field
-            label="GST Number"
-            value={form.gst}
-            onChangeText={set('gst')}
-            placeholder="22AAAAA0000A1Z5"
-            autoCapitalize="characters"
-          />
+            <Text style={[styles.sectionLabel, { marginTop: 18 }]}>OPTIONAL</Text>
+            <Field
+              label="GST Number"
+              value={form.gst}
+              onChangeText={set('gst')}
+              placeholder="22AAAAA0000A1Z5"
+              autoCapitalize="characters"
+            />
 
-          <TouchableOpacity
-            style={[styles.btn, loading && styles.btnDim]}
-            onPress={handleSave}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.btnText}>{loading ? 'Saving...' : 'Next: Business Type'}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, loading && styles.btnDim]}
+              onPress={handleSave}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={loading ? ['#666', '#444'] : ['#1A1A1A', '#000']}
+                style={styles.btnGradient}
+              >
+                <Text style={styles.btnText}>{loading ? 'Saving...' : 'Next: Business Type'}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </BlurView>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -105,75 +114,85 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingVertical: 40,
+    justifyContent: 'center',
   },
-  card: {
-    backgroundColor: '#EBEBEB',
+  cardContainer: {
     borderRadius: 28,
-    padding: 28,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 24,
-    elevation: 8,
+    elevation: 10,
+  },
+  card: {
+    padding: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
   title: {
-    fontSize: 22,
+    fontSize: 26,
     fontFamily: 'Outfit_700Bold',
     color: '#111',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Outfit_400Regular',
-    color: '#888',
-    marginBottom: 22,
+    color: '#666',
+    marginBottom: 26,
+    lineHeight: 18,
   },
   sectionLabel: {
     fontSize: 10,
     fontFamily: 'Outfit_700Bold',
     color: '#AAA',
-    letterSpacing: 1.2,
-    marginBottom: 10,
+    letterSpacing: 1.5,
+    marginBottom: 12,
   },
   fieldWrap: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Outfit_600SemiBold',
-    color: '#555',
-    marginBottom: 5,
+    color: '#444',
+    marginBottom: 6,
   },
   fieldInput: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    height: 46,
-    paddingHorizontal: 14,
-    fontSize: 14,
+    borderColor: '#E8E8E8',
+    height: 50,
+    paddingHorizontal: 16,
+    fontSize: 15,
     fontFamily: 'Outfit_400Regular',
-    color: '#222',
+    color: '#111',
   },
   fieldInputMulti: {
-    height: 80,
-    paddingTop: 12,
+    height: 90,
+    paddingTop: 14,
   },
   btn: {
-    backgroundColor: '#111',
-    borderRadius: 12,
-    height: 52,
+    height: 54,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 24,
+  },
+  btnGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 22,
   },
   btnDim: {
-    backgroundColor: '#555',
+    opacity: 0.6,
   },
   btnText: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Outfit_600SemiBold',
+    letterSpacing: 0.5,
   },
 });
 
