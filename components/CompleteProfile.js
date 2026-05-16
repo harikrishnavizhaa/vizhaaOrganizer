@@ -5,37 +5,55 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 import BlobBackground from './BlobBackground';
 import { api } from '../services/api';
 
-const Field = ({ label, value, onChangeText, placeholder, keyboardType, multiline, autoCapitalize }) => (
-  <View style={styles.fieldWrap}>
+const Field = ({ label, value, onChangeText, placeholder, keyboardType, multiline, autoCapitalize, onPress, editable = true }) => (
+  <TouchableOpacity activeOpacity={onPress ? 0.7 : 1} onPress={onPress} style={styles.fieldWrap}>
     <Text style={styles.fieldLabel}>{label}</Text>
-    <TextInput
-      style={[styles.fieldInput, multiline && styles.fieldInputMulti]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor="#BBB"
-      keyboardType={keyboardType || 'default'}
-      autoCapitalize={autoCapitalize || 'words'}
-      multiline={multiline}
-      textAlignVertical={multiline ? 'top' : 'center'}
-    />
-  </View>
+    <View style={{ position: 'relative' }}>
+      <TextInput
+        style={[styles.fieldInput, multiline && styles.fieldInputMulti, !editable && { color: '#333' }]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#BBB"
+        keyboardType={keyboardType || 'default'}
+        autoCapitalize={autoCapitalize || 'words'}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        editable={editable && !onPress}
+        pointerEvents={onPress ? 'none' : 'auto'}
+      />
+      {onPress && (
+        <Ionicons name="calendar-outline" size={20} color="#888" style={styles.inputIcon} />
+      )}
+    </View>
+  </TouchableOpacity>
 );
 
 const CompleteProfile = ({ onDone }) => {
   const [form, setForm] = useState({
-    name: '', companyName: '', email: '', city: '', gst: '',
+    name: '', role: '', dob: null, email: '', city: '', gst: '', companyName: '',
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setForm(f => ({ ...f, dob: selectedDate }));
+    }
+  };
+
   const handleSave = async () => {
     if (!form.name.trim())         { Alert.alert('Required', 'Please enter your full name'); return; }
-    if (!form.companyName.trim())  { Alert.alert('Required', 'Please enter your company name'); return; }
+    if (!form.role.trim())         { Alert.alert('Required', 'Please enter your role (e.g. Organizer)'); return; }
+    if (!form.dob)                 { Alert.alert('Required', 'Please select your date of birth'); return; }
     if (!form.email.includes('@')) { Alert.alert('Required', 'Please enter a valid email'); return; }
     if (!form.city.trim())         { Alert.alert('Required', 'Please enter your city'); return; }
 
@@ -61,11 +79,27 @@ const CompleteProfile = ({ onDone }) => {
         <View style={styles.cardContainer}>
           <BlurView intensity={80} tint="light" style={styles.card}>
             <Text style={styles.title}>Complete Profile</Text>
-            <Text style={styles.subtitle}>Tell us about your business to continue</Text>
+            <Text style={styles.subtitle}>Tell us about yourself to continue</Text>
 
             <Text style={styles.sectionLabel}>REQUIRED</Text>
             <Field label="Full Name" value={form.name} onChangeText={set('name')} placeholder="John Doe" />
-            <Field label="Company Name" value={form.companyName} onChangeText={set('companyName')} placeholder="Vizhaa Events" />
+            <Field label="Role" value={form.role} onChangeText={set('role')} placeholder="e.g. Organizer" />
+            <Field 
+              label="Date of Birth" 
+              value={form.dob ? form.dob.toLocaleDateString() : ''} 
+              placeholder="DD/MM/YYYY" 
+              onPress={() => setShowDatePicker(true)}
+              editable={false}
+            />
+            {showDatePicker && (
+              <DateTimePicker
+                value={form.dob || new Date()}
+                mode="date"
+                display="default"
+                onChange={onDateChange}
+                maximumDate={new Date()}
+              />
+            )}
             <Field
               label="Email"
               value={form.email}
@@ -77,6 +111,7 @@ const CompleteProfile = ({ onDone }) => {
             <Field label="City" value={form.city} onChangeText={set('city')} placeholder="Chennai" />
 
             <Text style={[styles.sectionLabel, { marginTop: 18 }]}>OPTIONAL</Text>
+            <Field label="Company Name" value={form.companyName} onChangeText={set('companyName')} placeholder="Vizhaa Events" />
             <Field
               label="GST Number"
               value={form.gst}
@@ -173,6 +208,11 @@ const styles = StyleSheet.create({
   fieldInputMulti: {
     height: 90,
     paddingTop: 14,
+  },
+  inputIcon: {
+    position: 'absolute',
+    right: 15,
+    top: 15,
   },
   btn: {
     height: 54,

@@ -1,14 +1,75 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import BottomTabBar from './BottomTabBar';
 
 const ProfileScreen = ({ onNavigate }) => {
-  const { user } = useAuth();
-  const [gender, setGender] = useState('male');
+  const { user, updateUser } = useAuth();
+  
+  const [form, setForm] = useState({
+    name: '',
+    role: '',
+    dob: null,
+    gender: 'male',
+    city: '',
+    email: '',
+  });
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name || '',
+        role: user.role || '',
+        dob: user.dob ? new Date(user.dob) : null,
+        gender: (user.gender || 'male').toLowerCase(),
+        city: user.city || '',
+        email: user.email || '',
+      });
+    }
+  }, [user]);
+
+  const handleUpdate = async () => {
+    setLoading(true);
+    try {
+      const response = await api.completeProfile({
+        name: form.name,
+        role: form.role,
+        dob: form.dob,
+        gender: form.gender,
+        city: form.city,
+        email: form.email,
+      });
+
+      if (response.success) {
+        updateUser(response.user);
+        Alert.alert('Success', 'Profile updated successfully');
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name.trim().charAt(0).toUpperCase();
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setForm(prev => ({ ...prev, dob: selectedDate }));
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -18,19 +79,11 @@ const ProfileScreen = ({ onNavigate }) => {
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
-              <Ionicons name="person" size={60} color="#DDD" />
+              <Text style={styles.avatarInitial}>{getInitials(form.name)}</Text>
             </View>
-            <TouchableOpacity style={styles.cameraBtn}>
-              <Ionicons name="camera" size={18} color="#FFF" />
-            </TouchableOpacity>
           </View>
-          <Text style={styles.profileName}>{user?.name || 'Name'}</Text>
-          <Text style={styles.profileRole}>{user?.role || 'Role'}</Text>
-          
-          <TouchableOpacity style={styles.editDetailsBtn}>
-            <Text style={styles.editDetailsText}>Edit Details</Text>
-            <Ionicons name="pencil" size={12} color="#FFB800" />
-          </TouchableOpacity>
+          <Text style={styles.profileName}>{form.name || 'Name'}</Text>
+          <Text style={styles.profileRole}>{form.role || 'Role'}</Text>
         </View>
 
         {/* Profile Details Card */}
@@ -50,18 +103,43 @@ const ProfileScreen = ({ onNavigate }) => {
               <TextInput 
                 style={styles.input}
                 placeholder="e.g. John Smith"
-                defaultValue={user?.name}
+                value={form.name}
+                onChangeText={(val) => setForm(prev => ({ ...prev, name: val }))}
+                placeholderTextColor="#BBB"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Role</Text>
+              <TextInput 
+                style={styles.input}
+                placeholder="e.g. Organizer"
+                value={form.role}
+                onChangeText={(val) => setForm(prev => ({ ...prev, role: val }))}
                 placeholderTextColor="#BBB"
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Date of Birth</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#BBB"
-              />
+              <TouchableOpacity 
+                style={styles.input} 
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={[styles.inputText, !form.dob && { color: '#BBB' }]}>
+                  {form.dob ? form.dob.toLocaleDateString() : 'DD/MM/YYYY'}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#888" style={styles.inputIcon} />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.dob || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={onDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -70,11 +148,11 @@ const ProfileScreen = ({ onNavigate }) => {
                 {['Male', 'Female', 'Other'].map(item => (
                   <TouchableOpacity 
                     key={item} 
-                    style={[styles.radioItem, gender === item.toLowerCase() && styles.radioActiveItem]}
-                    onPress={() => setGender(item.toLowerCase())}
+                    style={[styles.radioItem, form.gender === item.toLowerCase() && styles.radioActiveItem]}
+                    onPress={() => setForm(prev => ({ ...prev, gender: item.toLowerCase() }))}
                   >
-                    <View style={[styles.radioOuter, gender === item.toLowerCase() && styles.radioOuterActive]}>
-                      {gender === item.toLowerCase() && <View style={styles.radioInnerDot} />}
+                    <View style={[styles.radioOuter, form.gender === item.toLowerCase() && styles.radioOuterActive]}>
+                      {form.gender === item.toLowerCase() && <View style={styles.radioInnerDot} />}
                     </View>
                     <Text style={styles.radioLabel}>{item}</Text>
                   </TouchableOpacity>
@@ -90,7 +168,8 @@ const ProfileScreen = ({ onNavigate }) => {
               <TextInput 
                 style={styles.input}
                 placeholder="Enter your personal location"
-                defaultValue={user?.city}
+                value={form.city}
+                onChangeText={(val) => setForm(prev => ({ ...prev, city: val }))}
                 placeholderTextColor="#BBB"
               />
             </View>
@@ -112,9 +191,8 @@ const ProfileScreen = ({ onNavigate }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone Number</Text>
               <TextInput 
-                style={styles.input}
-                placeholder="98765xxxxx"
-                defaultValue={user?.mobile}
+                style={[styles.input, { backgroundColor: '#F0F0F0' }]}
+                value={user?.mobile}
                 editable={false}
                 placeholderTextColor="#BBB"
               />
@@ -128,16 +206,27 @@ const ProfileScreen = ({ onNavigate }) => {
               <TextInput 
                 style={styles.input}
                 placeholder="name@email.com"
-                defaultValue={user?.email}
+                value={form.email}
+                onChangeText={(val) => setForm(prev => ({ ...prev, email: val }))}
                 placeholderTextColor="#BBB"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
           </View>
         </View>
 
         {/* Confirm Button */}
-        <TouchableOpacity style={styles.confirmBtn}>
-          <Text style={styles.confirmBtnText}>Confirm Details</Text>
+        <TouchableOpacity 
+          style={[styles.confirmBtn, loading && { opacity: 0.7 }]} 
+          onPress={handleUpdate}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.confirmBtnText}>Confirm Details</Text>
+          )}
         </TouchableOpacity>
 
       </ScrollView>
@@ -167,29 +256,21 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEE',
+    borderWidth: 2,
+    borderColor: '#FFB800',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
   },
-  cameraBtn: {
-    position: 'absolute',
-    bottom: 5,
-    right: 5,
-    backgroundColor: '#000',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
+  avatarInitial: {
+    fontSize: 50,
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFB800',
   },
   profileName: {
     fontSize: 20,
@@ -203,18 +284,15 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 2,
   },
-  editDetailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    alignSelf: 'flex-end',
-    marginRight: 30,
+  inputText: {
+    fontSize: 13,
+    fontFamily: 'Outfit_400Regular',
+    color: '#333',
   },
-  editDetailsText: {
-    fontSize: 12,
-    fontFamily: 'Outfit_600SemiBold',
-    color: '#FFB800',
-    marginRight: 5,
+  inputIcon: {
+    position: 'absolute',
+    right: 15,
+    top: 13,
   },
   cardContainer: {
     backgroundColor: '#FFF',
